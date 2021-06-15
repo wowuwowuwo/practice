@@ -43,6 +43,8 @@ type MergeJob struct {
 
 	nodeNum int
 	output  []int
+
+	useStdHeap bool
 }
 
 func NewMergeJob(input [][]int) *MergeJob {
@@ -81,15 +83,26 @@ func (job *MergeJob) DoSimpleMerge() {
 	job.runMerge()
 }
 
+// SetUseStdHeap when there are two many paths to merge,
+// use std heap, it's faster than simple heap, the threshold is about 256 paths
+func (job *MergeJob) SetUseStdHeap(effect bool) {
+	job.useStdHeap = effect
+}
+
 func (job *MergeJob) runMerge() {
 	if len(job.tasks) == 0 || job.nodeNum == 0 {
 		job.isDone = true
 		return
 	}
 
-	// init out heap, test shows that simple heap is faster than std heap about 50%
-	//outHeap := &OutHeapStd{data: make([]*Node, 0, len(job.tasks))}
-	outHeap := &OutHeapSimple{data: make([]*Node, 0, len(job.tasks))}
+	// init out heap, test shows that simple heap is faster than std heap about 50% when merge paths is small;
+	// std heap has more advantages when paths increases about above 256-pathway
+	var outHeap OutHeap
+	if job.useStdHeap {
+		outHeap = &OutHeapStd{data: make([]*Node, 0, len(job.tasks))}
+	} else {
+		outHeap = &OutHeapSimple{data: make([]*Node, 0, len(job.tasks))}
+	}
 	for _, task := range job.tasks {
 		// get each task first node
 		// todo, it's possible to use batch sending to speed up
@@ -158,6 +171,23 @@ func MergeMultiSortedArrays(input [][]int) []int {
 		}
 	}
 	job := NewMergeJob(input)
+	// simple way
+	//fmt.Printf("mode simple\n")
+	job.DoSimpleMerge()
+	output := job.GetOutput()
+	return output
+}
+
+func MergeMultiSortedArraysWithStdHeap(input [][]int) []int {
+	for _, data := range input {
+		if !sort.IntsAreSorted(data) {
+			// invalid inputs
+			fmt.Printf("invalid inputs\n")
+			return []int{}
+		}
+	}
+	job := NewMergeJob(input)
+	job.SetUseStdHeap(true)
 	// simple way
 	//fmt.Printf("mode simple\n")
 	job.DoSimpleMerge()

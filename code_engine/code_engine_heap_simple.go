@@ -2,6 +2,11 @@ package code_engine
 
 import "math"
 
+type OutHeap interface {
+	Add(node *Node)
+	GetMin() *Node
+}
+
 // OutHeapSimple is min heap by default
 type OutHeapSimple struct {
 	data []*Node
